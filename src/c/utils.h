@@ -79,4 +79,7 @@ uint16_t cksum(const void *_data, int len);
  */
 bool ethernet_addr_is_equal(uint8_t *addr1, uint8_t *addr2);
 
+uint32_t in_addr_to_uint32 (struct in_addr address);
+struct in_addr *uint32_to_in_addr (uint32_t address);
+
 #endif

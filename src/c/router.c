@@ -57,13 +57,45 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 #include "chirouter.h"
 #include "arp.h"
 #include "utils.h"
 #include "utlist.h"
 
+//handle ARP messages, ICMP messages directed to the router, and IP datagrams.
 
+bool chirouter_find_match_router(chirouter_ctx_t *ctx, ethernet_frame_t *frame)
+{
+    iphdr_t* ip_hdr = (iphdr_t*) (frame->raw + sizeof(ethhdr_t));
+    chirouter_interface_t *interface;
+    for (int i = 0; i < ctx->num_interfaces; i++)
+    {
+        interface = &ctx->interfaces[i];
+        if (in_addr_to_uint32(interface->ip) == ip_hdr->dst)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool chirouter_find_routing_entry(chirouter_ctx_t *ctx, ethernet_frame_t *frame)
+{
+    iphdr_t* ip_hdr = (iphdr_t*) (frame->raw + sizeof(ethhdr_t));
+    chirouter_rtable_entry_t *routing_entry;
+    for (int i = 0; i < ctx->num_rtable_entries; i++)
+    {
+        routing_entry = &ctx->routing_table[i];
+        if ((ip_hdr->dst & in_addr_to_uint32(routing_entry->mask)) 
+                                == in_addr_to_uint32(routing_entry->dest))
+        {
+            return true;
+        }
+    }
+    return false;    
+}
 /*
  * chirouter_process_ethernet_frame - Process a single inbound Ethernet frame
  *
@@ -103,7 +135,95 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
 {
     /* Your code goes here */
 
-    return 0;
+    /* Accessing the Ethernet header */
+    ethhdr_t* hdr = (ethhdr_t*) frame->raw;
+
+    /* Accessing the IP header */
+    iphdr_t* ip_hdr = (iphdr_t*) (frame->raw + sizeof(ethhdr_t));
+    
+    if ((hdr->type == ETHERTYPE_IP) || (hdr->type == ETHERTYPE_IPV6))
+    {
+        if (ip_hdr->dst == (uint32_t) frame->in_interface->ip.s_addr)
+        {
+            if ((ip_hdr->proto = IPPROTO_TCP) || (ip_hdr->proto = IPPROTO_UDP))
+            {
+            // ICMP dst Port unreachable
+            }
+            else if (ip_hdr->ttl == 1)
+            {
+                // ICMP time exceeded
+            }
+            else if (ip_hdr->proto = IPPROTO_ICMP)
+            {
+                /* Accessing an ICMP message */
+                icmp_packet_t* icmp = (icmp_packet_t*) (frame->raw + sizeof(ethhdr_t) + sizeof(iphdr_t));
+                if (icmp->type == ICMPTYPE_ECHO_REQUEST)
+                {
+                    //ICMPTYPE_ECHO_REPLY 
+                }
+                else 
+                {
+                    // do nothing
+                }
+            }
+            else 
+            {
+                // ICMP destination protocol unreachable
+            }
+        }
+        else if (chirouter_find_match_router(ctx, frame))
+        {
+            // ICMP CODE_DEST_PORT_UNREACHABLE 
+        }
+        else
+        {
+            if (chirouter_find_routing_entry(ctx, frame))
+            {
+                pthread_mutex_lock(&(ctx->lock_arp));
+                chirouter_arpcache_entry_t* arpcache_entry = chirouter_arp_cache_lookup(ctx, uint32_to_in_addr(ip_hdr->dst)); // struct in_addr
+                pthread_mutex_unlock(&(ctx->lock_arp));
+                if (arpcache_entry == NULL)
+                {
+                    // send arp request;
+                    chirouter_send_arp_message(ctx, frame->in_interface, ip_hdr->dst);
+                    // update list of pending arp requests;
+                }
+                else
+                {
+                    // forward the datagram;
+                }
+            }
+            else 
+            {
+                // ICMP network unreachable
+            }
+        }
+        return 0;
+    }
+    else 
+    {
+        /* Accessing an ARP message */
+        arp_packet_t* arp = (arp_packet_t*) (frame->raw + sizeof(ethhdr_t));
+        if (arp->op == ARP_OP_REPLY)
+        {
+            pthread_mutex_lock(&(ctx->lock_arp));
+            int result = chirouter_arp_cache_add(ctx, uint32_to_in_addr(arp->spa), arp->sha); // struct in addr
+            pthread_mutex_unlock(&(ctx->lock_arp));
+            if (result != 0)
+            {
+                // chilog DEBOG
+            }
+            // forward withheld frames
+        } 
+        else //ARP_OP_REQUEST
+        {
+            // if for me
+            // send arp reply 
+            // chirouter_send_arp_message(ctx, frame->in_interface, mac address hdr->src, ip_hdr->src))
+            // if not for me
+        }
+        return 0;
+    }
 }
 
 

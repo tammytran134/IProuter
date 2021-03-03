@@ -79,6 +79,29 @@
 #define ARP_REQ_REMOVE (1)
 
 
+void chirouter_send_arp_message(chirouter_ctx_t *ctx, chirouter_interface_t *out_interface, uint32_t dst_ip)
+{
+    uint8_t *raw = calloc(1, sizeof (ethhdr_t) + (sizeof (arp_packet_t)));
+    ethhdr_t* hdr = (ethhdr_t*) raw;
+    hdr->dst = 0xFFFFFFFFFFFF;
+    hdr->src = out_interface->mac;
+    hdr->type = ETHERTYPE_ARP; 
+
+    arp_packet_t *arp_packet = calloc (1, sizeof (arp_packet_t));
+    arp_packet_t *arp_packet = (arp_packet_t*) (raw + sizeof(ethhdr_t));
+    arp_packet->hrd = ARP_HRD_ETHERNET;
+    arp_packet->pro = ETHERTYPE_IP;   
+    arp_packet->hln = ETHER_ADDR_LEN;
+    arp_packet->pln = IPV4_ADDR_LEN;
+    arp_packet->op = ARP_OP_REQUEST;
+    arp_packet->sha = out_interface->mac;
+    arp_packet->spa = in_addr_to_uint32(out_interface->ip);
+    //arp_packet->tha
+    arp_packet->tpa = dst_ip;
+    chirouter_send_frame(ctx, out_interface, raw, 
+                    ((sizeof (ethhdr_t)) + (sizeof (arp_packet_t))));
+}
+
 /*
  * chirouter_arp_process_pending_req - Process a single pending ARP request
  *
@@ -101,12 +124,18 @@
 int chirouter_arp_process_pending_req(chirouter_ctx_t *ctx, chirouter_pending_arp_req_t *pending_req)
 {
     /* Your code goes here */
+    if (pending_req->times_sent < 5)
+    {
+        // send arp messages
 
-    /* You will be able to write the rest of the code while having
-     * this function always return ARP_REQ_KEEP, but make sure you
-     * return the correct return value when you implement this function */
-
-    return ARP_REQ_KEEP;
+        pending_req->times_sent++;
+        return ARP_REQ_KEEP;
+    }
+    else 
+    {
+        // send ICMP Host Unreachable for each of withheld frames
+        return ARP_REQ_REMOVE;
+    }
 }
       
 
