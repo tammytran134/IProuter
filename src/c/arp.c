@@ -83,8 +83,8 @@ void chirouter_send_arp_message(chirouter_ctx_t *ctx, chirouter_interface_t *out
 {
     uint8_t *raw = calloc(1, sizeof (ethhdr_t) + (sizeof (arp_packet_t)));
     ethhdr_t* hdr = (ethhdr_t*) raw;
-    hdr->dst = 0xFFFFFFFFFFFF;
-    hdr->src = out_interface->mac;
+    memcpy(hdr->dst, 0xFFFFFFFFFFFF, ETHER_ADDR_LEN);
+    memcpy(hdr->src, out_interface->mac, ETHER_ADDR_LEN);
     hdr->type = ETHERTYPE_ARP; 
 
     arp_packet_t *arp_packet = calloc (1, sizeof (arp_packet_t));
@@ -94,7 +94,7 @@ void chirouter_send_arp_message(chirouter_ctx_t *ctx, chirouter_interface_t *out
     arp_packet->hln = ETHER_ADDR_LEN;
     arp_packet->pln = IPV4_ADDR_LEN;
     arp_packet->op = ARP_OP_REQUEST;
-    arp_packet->sha = out_interface->mac;
+    memcpy(arp_packet->sha, out_interface->mac, ETHER_ADDR_LEN);
     arp_packet->spa = in_addr_to_uint32(out_interface->ip);
     //arp_packet->tha
     arp_packet->tpa = dst_ip;

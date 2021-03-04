@@ -173,7 +173,7 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
         }
         else if (chirouter_find_match_router(ctx, frame))
         {
-            // ICMP CODE_DEST_PORT_UNREACHABLE 
+            // ICMP HOST UNREACBLE
         }
         else
         {
@@ -184,13 +184,28 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
                 pthread_mutex_unlock(&(ctx->lock_arp));
                 if (arpcache_entry == NULL)
                 {
+                    chirouter_pending_arp_req_t* pending_req = chirouter_arp_pending_req_lookup(ctx, uint32_to_in_addr(ip_hdr->dst));
                     // send arp request;
-                    chirouter_send_arp_message(ctx, frame->in_interface, ip_hdr->dst);
-                    // update list of pending arp requests;
+                    if (pending_req == NULL)
+                    {
+                        pthread_mutex_lock(&(ctx->lock_arp));
+                        chirouter_send_arp_message(ctx, frame->in_interface, ip_hdr->dst);
+                        pending_req = chirouter_arp_pending_req_add(ctx, uint32_to_in_addr(ip_hdr->dst),frame->in_interface);
+                        chirouter_arp_pending_req_add_frame(ctx, pending_req, frame);
+                        pthread_mutex_unlock(&(ctx->lock_arp));
+                    }
+                    else
+                    {
+                        pthread_mutex_lock(&(ctx->lock_arp));
+                        chirouter_arp_pending_req_add_frame(ctx, pending_req, frame);
+                        pthread_mutex_unlock(&(ctx->lock_arp));
+                    }
                 }
                 else
                 {
                     // forward the datagram;
+                    // but no host on the target network replies to an ARP request, 
+                    // you must send an ICMP Host Unreachable reply.
                 }
             }
             else 
@@ -200,7 +215,7 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
         }
         return 0;
     }
-    else 
+    else if (hdr->type == ETHERTYPE_ARP) 
     {
         /* Accessing an ARP message */
         arp_packet_t* arp = (arp_packet_t*) (frame->raw + sizeof(ethhdr_t));
@@ -211,16 +226,18 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
             pthread_mutex_unlock(&(ctx->lock_arp));
             if (result != 0)
             {
-                // chilog DEBOG
+                // chilog DEBUG
             }
             // forward withheld frames
+            // remove the pending ARP request from the pending ARP request list
         } 
-        else //ARP_OP_REQUEST
+        else if (arp->op == ARP_OP_REQUEST)
         {
             // if for me
             // send arp reply 
             // chirouter_send_arp_message(ctx, frame->in_interface, mac address hdr->src, ip_hdr->src))
             // if not for me
+            // ignore
         }
         return 0;
     }
