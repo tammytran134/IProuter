@@ -80,26 +80,26 @@
 
 
 void chirouter_send_arp_message(chirouter_ctx_t *ctx, chirouter_interface_t *out_interface, 
-                                                uint8_t *dst_mac, uint32_t dst_ip, int type)
+                                            uint8_t *dst_mac, uint32_t dst_ip, int type)
 {
     uint8_t *raw = calloc(1, sizeof (ethhdr_t) + (sizeof (arp_packet_t)));
     ethhdr_t* hdr = (ethhdr_t*) raw;
     hdr->type = ETHERTYPE_ARP; 
 
     arp_packet_t *arp_packet = calloc (1, sizeof (arp_packet_t));
-    arp_packet_t *arp_packet = (arp_packet_t*) (raw + sizeof(ethhdr_t));
+    arp_packet = (arp_packet_t*) (raw + sizeof(ethhdr_t));
     arp_packet->hrd = htons(ARP_HRD_ETHERNET);
     arp_packet->pro = htons(ETHERTYPE_IP);   
     arp_packet->hln = ETHER_ADDR_LEN;
     arp_packet->pln = IPV4_ADDR_LEN;
     if (type == ARP_OP_REQUEST)
     {
-        memcpy(hdr->dst, 0xFFFFFFFFFFFF, ETHER_ADDR_LEN);
+        memcpy(hdr->dst, "\xFF", ETHER_ADDR_LEN);
         memcpy(hdr->src, out_interface->mac, ETHER_ADDR_LEN);
         arp_packet->op = htons(ARP_OP_REQUEST);
         memcpy(arp_packet->sha, out_interface->mac, ETHER_ADDR_LEN);
         arp_packet->spa = in_addr_to_uint32(out_interface->ip);
-        memcpy(arp_packet->tha, 0x000000000000, ETHER_ADDR_LEN);
+        memcpy(arp_packet->tha, "\x00", ETHER_ADDR_LEN);
         arp_packet->tpa = dst_ip;
         chirouter_send_frame(ctx, out_interface, raw, 
                     ((sizeof (ethhdr_t)) + (sizeof (arp_packet_t))));
@@ -150,7 +150,7 @@ int chirouter_arp_process_pending_req(chirouter_ctx_t *ctx, chirouter_pending_ar
     {
         // send arp request
         chirouter_send_arp_message(ctx, pending_req->out_interface, 
-                                    0xFFFFFFFFFFFF, in_addr_to_uint32(pending_req->ip), 
+                                    NULL, in_addr_to_uint32(pending_req->ip), 
                                     ARP_OP_REQUEST);
         pending_req->times_sent++;
         return ARP_REQ_KEEP;

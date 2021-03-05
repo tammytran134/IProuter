@@ -69,7 +69,7 @@
 #include "chirouter.h"
 
 void chirouter_send_arp_message(chirouter_ctx_t *ctx, chirouter_interface_t *out_interface, 
-                                                uint8_t *dst_mac, uint32_t dst_ip, int type)
+                                                uint8_t *dst_mac, uint32_t dst_ip, int type);
 
 /*
  * chirouter_arp_cache_lookup - Look up an IP in the ARP cache

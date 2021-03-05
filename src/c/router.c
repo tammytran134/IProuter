@@ -188,7 +188,7 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
                     if (pending_req == NULL)
                     {
                         pthread_mutex_lock(&(ctx->lock_arp));
-                        chirouter_send_arp_message(ctx, frame->in_interface, ip_hdr->dst);
+                        chirouter_send_arp_message(ctx, frame->in_interface, NULL, ip_hdr->dst, ARP_OP_REQUEST);
                         pending_req = chirouter_arp_pending_req_add(ctx, uint32_to_in_addr(ip_hdr->dst),frame->in_interface);
                         chirouter_arp_pending_req_add_frame(ctx, pending_req, frame);
                         pthread_mutex_unlock(&(ctx->lock_arp));
