@@ -105,6 +105,6 @@ uint32_t in_addr_to_uint32 (struct in_addr address)
 struct in_addr *uint32_to_in_addr (uint32_t address)
 {
     struct in_addr *result = calloc(1, sizeof (struct in_addr));
-    result->s_addr = (unsigned long) address;
+    result->s_addr = (in_addr_t) address;
     return result;
 }

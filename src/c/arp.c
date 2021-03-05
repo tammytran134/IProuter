@@ -79,27 +79,49 @@
 #define ARP_REQ_REMOVE (1)
 
 
-void chirouter_send_arp_message(chirouter_ctx_t *ctx, chirouter_interface_t *out_interface, uint32_t dst_ip)
+void chirouter_send_arp_message(chirouter_ctx_t *ctx, chirouter_interface_t *out_interface, 
+                                                uint8_t *dst_mac, uint32_t dst_ip, int type)
 {
     uint8_t *raw = calloc(1, sizeof (ethhdr_t) + (sizeof (arp_packet_t)));
     ethhdr_t* hdr = (ethhdr_t*) raw;
-    memcpy(hdr->dst, 0xFFFFFFFFFFFF, ETHER_ADDR_LEN);
-    memcpy(hdr->src, out_interface->mac, ETHER_ADDR_LEN);
     hdr->type = ETHERTYPE_ARP; 
 
     arp_packet_t *arp_packet = calloc (1, sizeof (arp_packet_t));
     arp_packet_t *arp_packet = (arp_packet_t*) (raw + sizeof(ethhdr_t));
-    arp_packet->hrd = ARP_HRD_ETHERNET;
-    arp_packet->pro = ETHERTYPE_IP;   
+    arp_packet->hrd = htons(ARP_HRD_ETHERNET);
+    arp_packet->pro = htons(ETHERTYPE_IP);   
     arp_packet->hln = ETHER_ADDR_LEN;
     arp_packet->pln = IPV4_ADDR_LEN;
-    arp_packet->op = ARP_OP_REQUEST;
-    memcpy(arp_packet->sha, out_interface->mac, ETHER_ADDR_LEN);
-    arp_packet->spa = in_addr_to_uint32(out_interface->ip);
-    //arp_packet->tha
-    arp_packet->tpa = dst_ip;
-    chirouter_send_frame(ctx, out_interface, raw, 
+    if (type == ARP_OP_REQUEST)
+    {
+        memcpy(hdr->dst, 0xFFFFFFFFFFFF, ETHER_ADDR_LEN);
+        memcpy(hdr->src, out_interface->mac, ETHER_ADDR_LEN);
+        arp_packet->op = htons(ARP_OP_REQUEST);
+        memcpy(arp_packet->sha, out_interface->mac, ETHER_ADDR_LEN);
+        arp_packet->spa = in_addr_to_uint32(out_interface->ip);
+        memcpy(arp_packet->tha, 0x000000000000, ETHER_ADDR_LEN);
+        arp_packet->tpa = dst_ip;
+        chirouter_send_frame(ctx, out_interface, raw, 
                     ((sizeof (ethhdr_t)) + (sizeof (arp_packet_t))));
+        // free the frame
+    }
+    else if (type == ARP_OP_REPLY)
+    {
+        memcpy(hdr->dst, dst_mac, ETHER_ADDR_LEN);
+        memcpy(hdr->src, out_interface->mac, ETHER_ADDR_LEN);
+        arp_packet->op = htons(ARP_OP_REPLY);
+        memcpy(arp_packet->sha, out_interface->mac, ETHER_ADDR_LEN);
+        arp_packet->spa = in_addr_to_uint32(out_interface->ip);
+        memcpy(arp_packet->tha, dst_mac, ETHER_ADDR_LEN);
+        arp_packet->tpa = dst_ip;
+        chirouter_send_frame(ctx, out_interface, raw, 
+                    ((sizeof (ethhdr_t)) + (sizeof (arp_packet_t))));
+        // free the frame
+    }
+    else
+    {
+        // chilog
+    }
 }
 
 /*
@@ -126,8 +148,10 @@ int chirouter_arp_process_pending_req(chirouter_ctx_t *ctx, chirouter_pending_ar
     /* Your code goes here */
     if (pending_req->times_sent < 5)
     {
-        // send arp messages
-
+        // send arp request
+        chirouter_send_arp_message(ctx, pending_req->out_interface, 
+                                    0xFFFFFFFFFFFF, in_addr_to_uint32(pending_req->ip), 
+                                    ARP_OP_REQUEST);
         pending_req->times_sent++;
         return ARP_REQ_KEEP;
     }
