@@ -84,7 +84,7 @@ void chirouter_send_arp_message(chirouter_ctx_t *ctx, chirouter_interface_t *out
 {
     uint8_t *raw = calloc(1, sizeof (ethhdr_t) + (sizeof (arp_packet_t)));
     ethhdr_t* hdr = (ethhdr_t*) raw;
-    hdr->type = ETHERTYPE_ARP; 
+    hdr->type = htons(ETHERTYPE_ARP); 
 
     arp_packet_t *arp_packet = calloc (1, sizeof (arp_packet_t));
     arp_packet = (arp_packet_t*) (raw + sizeof(ethhdr_t));

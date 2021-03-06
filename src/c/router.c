@@ -190,8 +190,10 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
     uint16_t hdr_type = ntohs(hdr->type);
     if ((hdr_type == ETHERTYPE_IP) || (hdr_type == ETHERTYPE_IPV6))
     {
+        chilog(DEBUG, "[ETHERNET TYPE]: IP DATAGRAM");
         if (ip_hdr->dst == in_addr_to_uint32(frame->in_interface->ip))
         {
+            chilog(DEBUG, "[FIRST CASE]: FRAME COMES TO THE ROUTER");
             if ((ip_hdr->proto = IPPROTO_TCP) || (ip_hdr->proto = IPPROTO_UDP))
             {
                 // ICMP dst Port unreachable
@@ -220,21 +222,28 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
         }
         else if (chirouter_find_match_router(ctx, frame))
         {
+            chilog(DEBUG, "[SECOND CASE]: FRAME COMES TO OTHER ROUTERS");
             // ICMP HOST UNREACHABLE
             chirouter_send_icmp(ctx, ICMPTYPE_DEST_UNREACHABLE, ICMPCODE_DEST_HOST_UNREACHABLE, frame);
         }
         else
         {
+            chilog(DEBUG, "[THIRD CASE]: TRY TO FORWARD DATAGRAM");
             if (chirouter_find_routing_entry(ctx, frame))
             {
+                chilog(DEBUG, "[IP FORWARDING]: ROUTING ENTRY FOUND");
                 pthread_mutex_lock(&(ctx->lock_arp));
                 chirouter_arpcache_entry_t* arpcache_entry = chirouter_arp_cache_lookup(ctx, uint32_to_in_addr(ip_hdr->dst)); // struct in_addr
                 pthread_mutex_unlock(&(ctx->lock_arp));
                 if (arpcache_entry == NULL)
                 {
+                    chilog(DEBUG, "[IP FORWARDING]: ARP CACHE ENTRY NOT FOUND");
+                    pthread_mutex_lock(&(ctx->lock_arp));
                     chirouter_pending_arp_req_t* pending_req = chirouter_arp_pending_req_lookup(ctx, uint32_to_in_addr(ip_hdr->dst));
+                    pthread_mutex_unlock(&(ctx->lock_arp));
                     if (pending_req == NULL)
                     {
+                        chilog(DEBUG, "[IP FORWARDING]: NOT IN PENDING REQUEST LIST");
                         pthread_mutex_lock(&(ctx->lock_arp));
                         chirouter_send_arp_message(ctx, frame->in_interface, NULL, ip_hdr->dst, ARP_OP_REQUEST);
                         pending_req = chirouter_arp_pending_req_add(ctx, uint32_to_in_addr(ip_hdr->dst),frame->in_interface);
@@ -243,6 +252,7 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
                     }
                     else
                     {
+                        chilog(DEBUG, "[IP FORWARDING]: ALREADY IN PENDING REQUEST LIST");
                         pthread_mutex_lock(&(ctx->lock_arp));
                         chirouter_arp_pending_req_add_frame(ctx, pending_req, frame);
                         pthread_mutex_unlock(&(ctx->lock_arp));
@@ -264,6 +274,7 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
             }
             else 
             {
+                chilog(DEBUG, "[IP FORWARDING]: ROUTING ENTRY NOT FOUND");
                 // ICMP network unreachable
                 chirouter_send_icmp(ctx, ICMPTYPE_DEST_UNREACHABLE, ICMPCODE_DEST_NET_UNREACHABLE, frame);
             }
@@ -273,11 +284,17 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
     else if (hdr_type == ETHERTYPE_ARP) 
     {
         /* Accessing an ARP message */
-        arp_packet_t* arp = (arp_packet_t*) (frame->raw + sizeof(ethhdr_t));
-        if (ip_hdr->dst == in_addr_to_uint32(frame->in_interface->ip))
+        chilog(DEBUG, "[ETHERNET TYPE]: ARP MESSAGES");
+        arp_packet_t* arp = malloc (sizeof (arp_packet_t));
+        arp = (arp_packet_t*) (frame->raw + sizeof(ethhdr_t));
+        // chilog(DEBUG, "[ETHERNET TYPE]: DEST IP ADDRESS %zu", arp->tpa);
+        // chilog(DEBUG, "[ETHERNET TYPE]: ROUTER IP ADDRESS %zu", in_addr_to_uint32(frame->in_interface->ip));
+        if (arp->tpa == in_addr_to_uint32(frame->in_interface->ip))
         {
+            chilog(DEBUG, "[ARP MESSAGE]: IT'S FOR ME");
             if (ntohs(arp->op) == ARP_OP_REPLY)
             {
+                chilog(DEBUG, "[ARP MESSAGE]: ARP REPLY");
                 pthread_mutex_lock(&(ctx->lock_arp));
                 int result = chirouter_arp_cache_add(ctx, uint32_to_in_addr(arp->spa), arp->sha); 
                 pthread_mutex_unlock(&(ctx->lock_arp));
@@ -304,6 +321,7 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
             else if (ntohs(arp->op) == ARP_OP_REQUEST)
             {
                 // send arp reply
+                chilog(DEBUG, "[ARP MESSAGE]: ARP REQUEST");
                 chirouter_send_arp_message(ctx, frame->in_interface, 
                                     arp->sha, arp->spa,
                                     ARP_OP_REPLY); 
@@ -311,6 +329,7 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
         }
         else
         {
+            chilog(DEBUG, "[ARP MESSAGE]: IT'S NOT FOR ME");
             return 0;
         }
         return 0;
