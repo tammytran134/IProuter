@@ -264,6 +264,8 @@ typedef struct chirouter_ctx
  */
 int chirouter_send_frame(chirouter_ctx_t *ctx, chirouter_interface_t *iface, uint8_t *msg, size_t len);
 
+/* ICMP send frame function */
+void chirouter_send_icmp(chirouter_ctx_t *ctx, uint8_t type, uint8_t code, ethernet_frame_t *frame);
 
 /* Note: You should not call any of the functions below */
 
