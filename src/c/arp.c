@@ -118,6 +118,7 @@ void chirouter_send_arp_message(chirouter_ctx_t *ctx, chirouter_interface_t *out
         arp_packet->tpa = dst_ip;
         chirouter_send_frame(ctx, out_interface, raw, 
                     ((sizeof (ethhdr_t)) + (sizeof (arp_packet_t))));
+        chilog(DEBUG, "[ARP MESSAGE]: ARP REPLY SENT");
         // free the frame
     }
     else

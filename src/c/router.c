@@ -166,7 +166,7 @@ void chirouter_send_icmp(chirouter_ctx_t *ctx, uint8_t type, uint8_t code, ether
     /* Set headers */
     memcpy(reply_ether_hdr->dst, frame_ethhdr->src, ETHER_ADDR_LEN);
     memcpy(reply_ether_hdr->src, frame->in_interface->mac, ETHER_ADDR_LEN);
-    reply_ether_hdr->type = type;
+    reply_ether_hdr->type = htons(ETHERTYPE_IP);
 
     reply_ip_hdr->version = 4;
     reply_ip_hdr->tos = 0;
