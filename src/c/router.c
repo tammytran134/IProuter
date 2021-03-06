@@ -264,19 +264,22 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
         if (ip_hdr->dst == in_addr_to_uint32(frame->in_interface->ip))
         {
             chilog(DEBUG, "[FIRST CASE]: FRAME COMES TO THE ROUTER");
-            if ((ip_hdr->proto = IPPROTO_TCP) || (ip_hdr->proto = IPPROTO_UDP))
+            if ((ip_hdr->proto == IPPROTO_TCP) || (ip_hdr->proto == IPPROTO_UDP))
             {
                 // ICMP dst Port unreachable
+                chilog(DEBUG, "[TCP/UDP]");
                 chirouter_send_icmp(ctx, ICMPTYPE_DEST_UNREACHABLE, ICMPCODE_DEST_PORT_UNREACHABLE, frame);
             }
             else if (ip_hdr->ttl == 1)
             {
                 // ICMP time exceeded
+                chilog(DEBUG, "[TIME EXCEEDED]");
                 chirouter_send_icmp(ctx, ICMPTYPE_TIME_EXCEEDED, 0, frame);
             }
-            else if (ip_hdr->proto = IPPROTO_ICMP)
+            else if (ip_hdr->proto == IPPROTO_ICMP)
             {
                 /* Accessing an ICMP message */
+                chilog(DEBUG, "[ICMP]");
                 icmp_packet_t* icmp = (icmp_packet_t*) (frame->raw + sizeof(ethhdr_t) + sizeof(iphdr_t));
                 if (icmp->type == ICMPTYPE_ECHO_REQUEST)
                 {
@@ -287,6 +290,7 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
             else 
             {
                 // ICMP destination protocol unreachable
+                chilog(DEBUG, "[DEST UNREACHABLE]");
                 chirouter_send_icmp(ctx, ICMPTYPE_DEST_UNREACHABLE, ICMPCODE_DEST_PROTOCOL_UNREACHABLE, frame);
             }
         }

@@ -6,34 +6,6 @@
 
 #IncludeRegexTransform: 
 
-/home/tammytran/Desktop/chirouter-p3-hoangsp-tammytran/src/c/arp.c
-netinet/in.h
--
-stdlib.h
--
-stdio.h
--
-time.h
--
-unistd.h
--
-pthread.h
--
-sched.h
--
-string.h
--
-stdbool.h
--
-arp.h
-/home/tammytran/Desktop/chirouter-p3-hoangsp-tammytran/src/c/arp.h
-chirouter.h
-/home/tammytran/Desktop/chirouter-p3-hoangsp-tammytran/src/c/chirouter.h
-utils.h
-/home/tammytran/Desktop/chirouter-p3-hoangsp-tammytran/src/c/utils.h
-utlist.h
-/home/tammytran/Desktop/chirouter-p3-hoangsp-tammytran/src/c/utlist.h
-
 /home/tammytran/Desktop/chirouter-p3-hoangsp-tammytran/src/c/arp.h
 inttypes.h
 -
