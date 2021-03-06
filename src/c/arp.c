@@ -78,6 +78,8 @@
 #define ARP_REQ_KEEP (0)
 #define ARP_REQ_REMOVE (1)
 
+/* ICMP send frame function */
+void chirouter_send_icmp(chirouter_ctx_t *ctx, uint8_t type, uint8_t code, ethernet_frame_t *frame);
 
 void chirouter_send_arp_message(chirouter_ctx_t *ctx, chirouter_interface_t *out_interface, 
                                             uint8_t *dst_mac, uint32_t dst_ip, int type)
@@ -161,7 +163,7 @@ int chirouter_arp_process_pending_req(chirouter_ctx_t *ctx, chirouter_pending_ar
         withheld_frame_t *elt;
         DL_FOREACH(pending_req->withheld_frames, elt)
         {
-            chirouter_send_icmp(ctx, ICMPTYPE_DEST_UNREACHABLE, ICMPCODE_DEST_HOST_UNREACHABLE, elt);
+            chirouter_send_icmp(ctx, ICMPTYPE_DEST_UNREACHABLE, ICMPCODE_DEST_HOST_UNREACHABLE, elt->frame);
         }
         return ARP_REQ_REMOVE;
     }
