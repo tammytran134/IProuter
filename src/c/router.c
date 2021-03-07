@@ -173,15 +173,14 @@ void chirouter_send_icmp(chirouter_ctx_t *ctx, uint8_t type, uint8_t code, ether
     reply_ip_hdr->proto = 1;
     reply_ip_hdr->dst = frame_iphdr->src;
     reply_ip_hdr->src = in_addr_to_uint32(frame->in_interface->ip);
-    reply_ip_hdr->cksum = cksum(reply_ip_hdr, sizeof(iphdr_t));
-    // identifcation, flags, fragments offset
+    // Waits for ICMP cksum to be computed
+    reply_ip_hdr->cksum = 0;
     reply_ip_hdr->id = 0;
     reply_ip_hdr->off = 0;
-    reply_ip_hdr->len = sizeof(iphdr_t) + ICMP_HDR_SIZE + payload_len; // Check?
-    // ttl
-    reply_ip_hdr->ttl = 64; // Ask on Ed?
-    // total length
     reply_ip_hdr->ihl = 5;
+    // reply_ip_hdr + sizeof(iphdr_t) returns the pointer to the IP payload
+    reply_ip_hdr->len = htons(sizeof(iphdr_t) + sizeof(reply_ip_hdr + sizeof(iphdr_t)));
+    reply_ip_hdr->ttl = 64;
 
     reply_icmp->type = type;
     reply_icmp->code = code;
@@ -200,6 +199,7 @@ void chirouter_send_icmp(chirouter_ctx_t *ctx, uint8_t type, uint8_t code, ether
     else if (type == ICMPTYPE_DEST_UNREACHABLE)
     {
         // dest_unreachable
+        reply_icmp->dest_unreachable.next_mtu = 0;
         memcpy(reply_icmp->dest_unreachable.payload, reply_ip_hdr, sizeof(iphdr_t) + 8);
     }
     else
@@ -207,6 +207,9 @@ void chirouter_send_icmp(chirouter_ctx_t *ctx, uint8_t type, uint8_t code, ether
         // time_exceeded
         memcpy(reply_icmp->time_exceeded.payload, reply_ip_hdr, sizeof(iphdr_t) + 8);
     }
+
+    // Computes IP header's cksum once ICMP's chksum has been computed
+    reply_ip_hdr->cksum = cksum(reply_ip_hdr, sizeof(iphdr_t));
 
     chirouter_send_frame(ctx, frame->in_interface, reply, reply_len);
 
