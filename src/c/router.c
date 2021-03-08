@@ -144,11 +144,12 @@ void chirouter_send_icmp(chirouter_ctx_t *ctx, uint8_t type, uint8_t code, ether
 {
     ethhdr_t *frame_ethhdr = (ethhdr_t *)frame->raw;
     iphdr_t *frame_iphdr = (iphdr_t *)(frame->raw + sizeof(ethhdr_t));
+    icmp_packet_t* icmp = (icmp_packet_t*) (frame->raw + sizeof(ethhdr_t) + sizeof(iphdr_t));
 
     int payload_len;
     if (type == ICMPTYPE_ECHO_REPLY || type == ICMPTYPE_ECHO_REQUEST)
     {
-        payload_len = MAX_ECHO_PAYLOAD;
+        payload_len = ntohs(frame_iphdr->len) - sizeof(iphdr_t) - ICMP_HDR_SIZE;
     }
     else
     {
@@ -179,7 +180,7 @@ void chirouter_send_icmp(chirouter_ctx_t *ctx, uint8_t type, uint8_t code, ether
     reply_ip_hdr->off = 0;
     reply_ip_hdr->ihl = 5;
     // reply_ip_hdr + sizeof(iphdr_t) returns the pointer to the IP payload
-    reply_ip_hdr->len = htons(sizeof(iphdr_t) + sizeof(reply_ip_hdr + sizeof(iphdr_t)));
+    //reply_ip_hdr->len = htons(sizeof(iphdr_t) + sizeof(reply_ip_hdr + sizeof(iphdr_t)));
     reply_ip_hdr->ttl = 64;
 
     reply_icmp->type = type;
@@ -193,18 +194,21 @@ void chirouter_send_icmp(chirouter_ctx_t *ctx, uint8_t type, uint8_t code, ether
         {
             reply_icmp->echo.identifier = 0;
             reply_icmp->echo.seq_num = 0;
+            reply_ip_hdr->len = frame_iphdr->len;
+            memcpy(reply_icmp->echo.payload, icmp->echo.payload, payload_len);
         }
-        reply_icmp->echo.payload;
     }
     else if (type == ICMPTYPE_DEST_UNREACHABLE)
     {
         // dest_unreachable
         reply_icmp->dest_unreachable.next_mtu = 0;
+        reply_ip_hdr->len = sizeof(iphdr_t) + ICMP_HDR_SIZE + payload_len;
         memcpy(reply_icmp->dest_unreachable.payload, reply_ip_hdr, sizeof(iphdr_t) + 8);
     }
     else
     {
         // time_exceeded
+        reply_ip_hdr->len = sizeof(iphdr_t) + ICMP_HDR_SIZE + payload_len;
         memcpy(reply_icmp->time_exceeded.payload, reply_ip_hdr, sizeof(iphdr_t) + 8);
     }
 
@@ -287,6 +291,7 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
                 if (icmp->type == ICMPTYPE_ECHO_REQUEST)
                 {
                     // ICMPTYPE_ECHO_REPLY
+                    chilog(DEBUG, "[ICMP] SEND ECHO REPLIES");
                     chirouter_send_icmp(ctx, ICMPTYPE_ECHO_REPLY, 0, frame);
                 }
             }
