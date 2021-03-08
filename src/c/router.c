@@ -148,9 +148,10 @@ void chirouter_send_icmp(chirouter_ctx_t *ctx, uint8_t type, uint8_t code, ether
     //length of total 
     // length subtract 
     int payload_len;
+    // int reply_len;
     if (type == ICMPTYPE_ECHO_REPLY || type == ICMPTYPE_ECHO_REQUEST)
     {
-        payload_len = ntohs(frame_iphdr->len) - ICMP_HDR_SIZE;
+        payload_len = ntohs(frame_iphdr->len) - sizeof(iphdr_t) - ICMP_HDR_SIZE;
     }
     else
     {
@@ -158,6 +159,7 @@ void chirouter_send_icmp(chirouter_ctx_t *ctx, uint8_t type, uint8_t code, ether
     }
 
     int reply_len = sizeof(ethhdr_t) + sizeof(iphdr_t) + ICMP_HDR_SIZE + payload_len;
+    chilog(DEBUG, "[SEND ICMP] length of frame is %i", reply_len);
     uint8_t reply[reply_len];
     memset(reply, 0, reply_len);
 
