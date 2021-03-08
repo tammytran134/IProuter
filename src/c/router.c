@@ -145,11 +145,12 @@ void chirouter_send_icmp(chirouter_ctx_t *ctx, uint8_t type, uint8_t code, ether
     ethhdr_t *frame_ethhdr = (ethhdr_t *)frame->raw;
     iphdr_t *frame_iphdr = (iphdr_t *)(frame->raw + sizeof(ethhdr_t));
     icmp_packet_t* icmp = (icmp_packet_t*) (frame->raw + sizeof(ethhdr_t) + sizeof(iphdr_t));
-
+    //length of total 
+    // length subtract 
     int payload_len;
     if (type == ICMPTYPE_ECHO_REPLY || type == ICMPTYPE_ECHO_REQUEST)
     {
-        payload_len = ntohs(frame_iphdr->len) - sizeof(iphdr_t) - ICMP_HDR_SIZE;
+        payload_len = ntohs(frame_iphdr->len) - ICMP_HDR_SIZE;
     }
     else
     {
@@ -180,7 +181,14 @@ void chirouter_send_icmp(chirouter_ctx_t *ctx, uint8_t type, uint8_t code, ether
     reply_ip_hdr->id = htons(0);
     reply_ip_hdr->off = htons(0);
     reply_ip_hdr->ihl = 5;
-    reply_ip_hdr->len = htons(frame->length - sizeof(ethhdr_t));
+    if (type == ICMPTYPE_ECHO_REPLY || type == ICMPTYPE_ECHO_REQUEST)
+    {
+        reply_ip_hdr->len = htons(frame->length - sizeof(ethhdr_t));
+    }
+    else 
+    {
+        reply_ip_hdr->len = htons(sizeof(iphdr_t) + ICMP_HDR_SIZE + payload_len);
+    }
     reply_ip_hdr->ttl = 64;
     reply_ip_hdr->cksum = cksum(reply_ip_hdr, sizeof(iphdr_t));
 
@@ -193,7 +201,8 @@ void chirouter_send_icmp(chirouter_ctx_t *ctx, uint8_t type, uint8_t code, ether
         // echo
         if (code == 0)
         {
-            reply_icmp->echo.identifier = htons(0);
+            reply_icmp->echo.identifier = icmp->echo.identifier;
+            reply_icmp->echo.seq_num = icmp->echo.seq_num;
             reply_icmp->echo.seq_num = htons(0);
             memcpy(reply_icmp->echo.payload, icmp->echo.payload, payload_len);
         }
