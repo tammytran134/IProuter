@@ -149,7 +149,7 @@ void chirouter_send_icmp(chirouter_ctx_t *ctx, uint8_t type, uint8_t code, ether
     int payload_len;
     if (type == ICMPTYPE_ECHO_REPLY || type == ICMPTYPE_ECHO_REQUEST)
     {
-        payload_len = ntohs(frame_iphdr->len) - ICMP_HDR_SIZE;
+        payload_len = ntohs(frame_iphdr->len) - sizeof(iphdr_t) - ICMP_HDR_SIZE;
     }
     else
     {
