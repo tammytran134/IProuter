@@ -203,7 +203,6 @@ void chirouter_send_icmp(chirouter_ctx_t *ctx, uint8_t type, uint8_t code, ether
         {
             reply_icmp->echo.identifier = icmp->echo.identifier;
             reply_icmp->echo.seq_num = icmp->echo.seq_num;
-            reply_icmp->echo.seq_num = htons(0);
             memcpy(reply_icmp->echo.payload, icmp->echo.payload, payload_len);
         }
     }
