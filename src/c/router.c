@@ -137,8 +137,8 @@ void forward_ip_datagram(chirouter_ctx_t *ctx, ethernet_frame_t *frame, uint8_t 
     ip_hdr->ttl--;
     chilog(DEBUG, "HERE 1?");
     // find the correct entry, gateway
-    chirouter_rtable_entry_t *rentry = chirouter_get_matching_entry(ctx, frame);
-    ip_hdr->dst = get_forward_ip(rentry, ip_hdr->dst);
+    // chirouter_rtable_entry_t *rentry = chirouter_get_matching_entry(ctx, frame);
+    // ip_hdr->dst = get_forward_ip(rentry, ip_hdr->dst);
     chilog(DEBUG, "HERE 2?");
     // Update cksum
     ip_hdr->cksum = cksum(ip_hdr, sizeof(iphdr_t));
