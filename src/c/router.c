@@ -334,6 +334,7 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
                     {
                         chilog(DEBUG, "[IP FORWARDING]: NOT IN PENDING REQUEST LIST");
                         pthread_mutex_lock(&(ctx->lock_arp));
+                        chilog(DEBUG, "[ARP MESSAGE]: SEND ARP REQUEST");
                         chirouter_send_arp_message(ctx, frame->in_interface, NULL, forward_ip, ARP_OP_REQUEST);
                         pending_req = chirouter_arp_pending_req_add(ctx, uint32_to_in_addr(forward_ip),frame->in_interface);
                         chirouter_arp_pending_req_add_frame(ctx, pending_req, frame);

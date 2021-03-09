@@ -96,12 +96,12 @@ void chirouter_send_arp_message(chirouter_ctx_t *ctx, chirouter_interface_t *out
     arp_packet->pln = IPV4_ADDR_LEN;
     if (type == ARP_OP_REQUEST)
     {
-        memcpy(hdr->dst, "\xFF", ETHER_ADDR_LEN);
+        memcpy(hdr->dst, "\xFF\xFF\xFF\xFF\xFF\xFF", ETHER_ADDR_LEN);
         memcpy(hdr->src, out_interface->mac, ETHER_ADDR_LEN);
         arp_packet->op = htons(ARP_OP_REQUEST);
         memcpy(arp_packet->sha, out_interface->mac, ETHER_ADDR_LEN);
         arp_packet->spa = in_addr_to_uint32(out_interface->ip);
-        memcpy(arp_packet->tha, "\x00", ETHER_ADDR_LEN);
+        memcpy(arp_packet->tha, "\x00\x00\x00\x00\x00\x00", ETHER_ADDR_LEN);
         arp_packet->tpa = dst_ip;
         chirouter_send_frame(ctx, out_interface, raw, 
                     ((sizeof (ethhdr_t)) + (sizeof (arp_packet_t))));
