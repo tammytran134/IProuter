@@ -139,6 +139,7 @@ void forward_ip_datagram(chirouter_ctx_t *ctx, ethernet_frame_t *frame, uint8_t 
     // chirouter_rtable_entry_t *rentry = chirouter_get_matching_entry(ctx, frame);
     // ip_hdr->dst = get_forward_ip(rentry, ip_hdr->dst);
     // Update cksum
+    ip_hdr->cksum = htons(0);
     ip_hdr->cksum = cksum(ip_hdr, sizeof(iphdr_t));
     chilog(DEBUG, "[FORWAD] Done updating ip header values");
 
