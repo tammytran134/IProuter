@@ -335,8 +335,8 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
                         chilog(DEBUG, "[IP FORWARDING]: NOT IN PENDING REQUEST LIST");
                         pthread_mutex_lock(&(ctx->lock_arp));
                         chilog(DEBUG, "[ARP MESSAGE]: SEND ARP REQUEST");
-                        chirouter_send_arp_message(ctx, frame->in_interface, NULL, forward_ip, ARP_OP_REQUEST);
-                        pending_req = chirouter_arp_pending_req_add(ctx, uint32_to_in_addr(forward_ip),frame->in_interface);
+                        chirouter_send_arp_message(ctx, forward_entry->interface, NULL, forward_ip, ARP_OP_REQUEST);
+                        pending_req = chirouter_arp_pending_req_add(ctx, uint32_to_in_addr(forward_ip), forward_entry->interface);
                         chirouter_arp_pending_req_add_frame(ctx, pending_req, frame);
                         pthread_mutex_unlock(&(ctx->lock_arp));
                     }
@@ -388,6 +388,7 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
                 pthread_mutex_lock(&(ctx->lock_arp));
                 int result = chirouter_arp_cache_add(ctx, uint32_to_in_addr(arp->spa), arp->sha); 
                 pthread_mutex_unlock(&(ctx->lock_arp));
+                chilog(DEBUG, "[ARP MESSAGE]: ARP REPLY SEGMENTATION 1");
                 if (result != 0)
                 {
                     // chilog DEBUG
@@ -395,16 +396,23 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
                 // forward withheld frames - decrement TTL - checksum
                 pthread_mutex_lock(&(ctx->lock_arp));
                 chirouter_pending_arp_req_t *arp_req = chirouter_arp_pending_req_lookup(ctx, &frame->in_interface->ip);
+                chilog(DEBUG, "[ARP MESSAGE]: ARP REPLY SEGMENTATION 2");
                 withheld_frame_t *elt;
                 DL_FOREACH(arp_req->withheld_frames, elt)
                 {
                     // Forward IP datagram
-                    forward_ip_datagram(ctx, elt->frame);
+                    if (elt != NULL)
+                    {
+                        forward_ip_datagram(ctx, elt->frame);
+                    }
                 }
+                chilog(DEBUG, "[ARP MESSAGE]: ARP REPLY SEGMENTATION 3");
                 // Free withheld frames
                 chirouter_arp_pending_req_free_frames(arp_req);
+                chilog(DEBUG, "[ARP MESSAGE]: ARP REPLY SEGMENTATION 4");
                 // remove the pending ARP request from the pending ARP request list
                 DL_DELETE(ctx->pending_arp_reqs, arp_req);
+                chilog(DEBUG, "[ARP MESSAGE]: ARP REPLY SEGMENTATION 5");
                 pthread_mutex_lock(&(ctx->lock_arp));
                 
             } 
