@@ -120,7 +120,8 @@ void forward_ip_datagram(chirouter_ctx_t *ctx, ethernet_frame_t *frame)
     // {
     //     ip_hdr->dst = gateway;
     // }
-    chirouter_send_frame(ctx, rentry->interface, frame->raw, frame->length);
+    chilog(DEBUG, "FORWARD IP DATAGRAM: %s", rentry->interface->name);
+    chirouter_send_frame(ctx, frame->in_interface, frame->raw, frame->length);
     return;
 }
 
@@ -388,15 +389,17 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
                 pthread_mutex_lock(&(ctx->lock_arp));
                 int result = chirouter_arp_cache_add(ctx, uint32_to_in_addr(arp->spa), arp->sha); 
                 pthread_mutex_unlock(&(ctx->lock_arp));
-                chilog(DEBUG, "[ARP MESSAGE]: ARP REPLY SEGMENTATION 1");
                 if (result != 0)
                 {
                     // chilog DEBUG
                 }
                 // forward withheld frames - decrement TTL - checksum
                 pthread_mutex_lock(&(ctx->lock_arp));
-                chirouter_pending_arp_req_t *arp_req = chirouter_arp_pending_req_lookup(ctx, &frame->in_interface->ip);
-                chilog(DEBUG, "[ARP MESSAGE]: ARP REPLY SEGMENTATION 2");
+                chirouter_pending_arp_req_t *arp_req = chirouter_arp_pending_req_lookup(ctx, uint32_to_in_addr(arp->spa));
+                if (arp_req == NULL)
+                {
+                    chilog(DEBUG, "[ARP MESSAGE]: NO PENDING ARP FOUND");
+                }
                 withheld_frame_t *elt;
                 DL_FOREACH(arp_req->withheld_frames, elt)
                 {
@@ -406,13 +409,10 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
                         forward_ip_datagram(ctx, elt->frame);
                     }
                 }
-                chilog(DEBUG, "[ARP MESSAGE]: ARP REPLY SEGMENTATION 3");
                 // Free withheld frames
                 chirouter_arp_pending_req_free_frames(arp_req);
-                chilog(DEBUG, "[ARP MESSAGE]: ARP REPLY SEGMENTATION 4");
                 // remove the pending ARP request from the pending ARP request list
                 DL_DELETE(ctx->pending_arp_reqs, arp_req);
-                chilog(DEBUG, "[ARP MESSAGE]: ARP REPLY SEGMENTATION 5");
                 pthread_mutex_lock(&(ctx->lock_arp));
                 
             } 
