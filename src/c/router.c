@@ -205,13 +205,13 @@ void chirouter_send_icmp(chirouter_ctx_t *ctx, uint8_t type, uint8_t code, ether
         {
             reply_icmp->echo.identifier = icmp->echo.identifier;
             reply_icmp->echo.seq_num = icmp->echo.seq_num;
-            memcpy(reply_icmp->echo.payload, icmp->echo.payload, payload_len);
+            memcpy(reply_icmp->echo.payload, frame_iphdr, payload_len);
         }
     }
     else if (type == ICMPTYPE_DEST_UNREACHABLE)
     {
         // dest_unreachable
-        memcpy(reply_icmp->dest_unreachable.payload, reply_ip_hdr, payload_len);
+        memcpy(reply_icmp->dest_unreachable.payload, frame_iphdr, payload_len);
     }
     else
     {
