@@ -107,6 +107,7 @@ chirouter_rtable_entry_t* chirouter_get_matching_entry(chirouter_ctx_t *ctx, eth
 
 void forward_ip_datagram(chirouter_ctx_t *ctx, ethernet_frame_t *frame)
 {
+    ethhdr_t *frame_ethhdr = (ethhdr_t *)frame->raw;
     iphdr_t *ip_hdr = (iphdr_t *)(frame->raw + sizeof(ethhdr_t));
     // update TTL and checksum
     ip_hdr->ttl--;
@@ -120,6 +121,7 @@ void forward_ip_datagram(chirouter_ctx_t *ctx, ethernet_frame_t *frame)
     // {
     //     ip_hdr->dst = gateway;
     // }
+    //frame_ethhdr->src 
     chilog(DEBUG, "FORWARD IP DATAGRAM: %s", rentry->interface->name);
     chirouter_send_frame(ctx, frame->in_interface, frame->raw, frame->length);
     return;
