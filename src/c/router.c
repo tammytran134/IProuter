@@ -216,7 +216,7 @@ void chirouter_send_icmp(chirouter_ctx_t *ctx, uint8_t type, uint8_t code, ether
     else
     {
         // time_exceeded
-        memcpy(reply_icmp->time_exceeded.payload, reply_ip_hdr, payload_len);
+        memcpy(reply_icmp->time_exceeded.payload, frame_iphdr, payload_len);
     }
     reply_icmp->chksum = cksum(reply_icmp, ICMP_HDR_SIZE + payload_len);
 
