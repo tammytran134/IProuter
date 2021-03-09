@@ -105,25 +105,52 @@ chirouter_rtable_entry_t* chirouter_get_matching_entry(chirouter_ctx_t *ctx, eth
     return result;
 }
 
-void forward_ip_datagram(chirouter_ctx_t *ctx, ethernet_frame_t *frame)
+void forward_ip_datagram(chirouter_ctx_t *ctx, ethernet_frame_t *frame, uint8_t *dst_mac)
 {
+    chilog(DEBUG, "[FORWAD] in forward function");
+    // From original frame
     ethhdr_t *frame_ethhdr = (ethhdr_t *)frame->raw;
-    iphdr_t *ip_hdr = (iphdr_t *)(frame->raw + sizeof(ethhdr_t));
-    // update TTL and checksum
+    iphdr_t *frame_iphdr = (iphdr_t *)(frame->raw + sizeof(ethhdr_t));
+
+    /* Construct new frame */
+    int msg_len = frame->length;
+    uint8_t msg[msg_len];
+    memset(msg, 0, msg_len);
+
+    chilog(DEBUG, "[FORWAD] Setting ethernet header values");
+    /* Ethernet header */
+    ethhdr_t *ether_hdr = (ethhdr_t *) msg;
+    memcpy(ether_hdr->dst, dst_mac, ETHER_ADDR_LEN);
+    memcpy(ether_hdr->src, frame->in_interface->mac, ETHER_ADDR_LEN);
+    ether_hdr->type = htons(ETHERTYPE_IP);
+    chilog(DEBUG, "[FORWAD] Done setting ethernet header values");
+
+    chilog(DEBUG, "[FORWAD] Copying ip header values");
+    /* IP header */
+    iphdr_t *ip_hdr = (iphdr_t *)(msg + sizeof(ethhdr_t));
+    // Copy frame's ip header over
+    memcpy(ip_hdr, frame_iphdr, frame->length - sizeof(ethhdr_t));
+    chilog(DEBUG, "[FORWAD] Done copying ip header values");
+
+    chilog(DEBUG, "[FORWAD] Updating ip header values");
+    // Update TTL
     ip_hdr->ttl--;
-    ip_hdr->cksum = cksum(ip_hdr, sizeof(iphdr_t));
+    chilog(DEBUG, "HERE 1?");
     // find the correct entry, gateway
     chirouter_rtable_entry_t *rentry = chirouter_get_matching_entry(ctx, frame);
     ip_hdr->dst = get_forward_ip(rentry, ip_hdr->dst);
-    // forward the datagram;
-    // uint32_t gateway = in_addr_to_uint32(rentry->gw);
-    // if (gateway != 0)
-    // {
-    //     ip_hdr->dst = gateway;
-    // }
-    //frame_ethhdr->src 
-    chilog(DEBUG, "FORWARD IP DATAGRAM: %s", rentry->interface->name);
-    chirouter_send_frame(ctx, frame->in_interface, frame->raw, frame->length);
+    chilog(DEBUG, "HERE 2?");
+    // Update cksum
+    ip_hdr->cksum = cksum(ip_hdr, sizeof(iphdr_t));
+    chilog(DEBUG, "[FORWAD] Done updating ip header values");
+
+    // ethhdr_t *frame_ethhdr = (ethhdr_t *)frame->raw;
+    // iphdr_t *ip_hdr = (iphdr_t *)(frame->raw + sizeof(ethhdr_t));
+    // // update TTL and checksum
+    // ip_hdr->ttl--;
+    // ip_hdr->cksum = cksum(ip_hdr, sizeof(iphdr_t));
+
+    chirouter_send_frame(ctx, frame->in_interface, msg, msg_len);
     return;
 }
 
@@ -361,7 +388,7 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
                     else
                     {
                         // Forward IP datagram
-                        forward_ip_datagram(ctx, frame);
+                        forward_ip_datagram(ctx, frame, hdr->dst);
                     }
                 }
             }
@@ -402,13 +429,14 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
                 {
                     chilog(DEBUG, "[ARP MESSAGE]: NO PENDING ARP FOUND");
                 }
+                chilog(DEBUG, "[ARP MESSAGE] WENT HERE???");
                 withheld_frame_t *elt;
                 DL_FOREACH(arp_req->withheld_frames, elt)
                 {
                     // Forward IP datagram
                     if (elt != NULL)
                     {
-                        forward_ip_datagram(ctx, elt->frame);
+                        forward_ip_datagram(ctx, elt->frame, arp->sha);
                     }
                 }
                 // Free withheld frames
