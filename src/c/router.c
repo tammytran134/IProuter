@@ -187,8 +187,7 @@ void chirouter_send_icmp(chirouter_ctx_t *ctx, uint8_t type,
     // From original frame
     ethhdr_t *frame_ethhdr = (ethhdr_t *)frame->raw;
     iphdr_t *frame_iphdr = (iphdr_t *)(frame->raw + sizeof(ethhdr_t));
-    icmp_packet_t* icmp = (icmp_packet_t*) (frame->raw + 
-                                    sizeof(ethhdr_t) + sizeof(iphdr_t));
+    icmp_packet_t* icmp = (icmp_packet_t*) (frame->raw + sizeof(ethhdr_t) + sizeof(iphdr_t));
 
     // Setting ICMP message's payload length
     int payload_len;
@@ -203,16 +202,14 @@ void chirouter_send_icmp(chirouter_ctx_t *ctx, uint8_t type,
     }
 
     /* Constructing new frame for ICMP message */
-    int reply_len = sizeof(ethhdr_t) + sizeof(iphdr_t) + 
-                                        ICMP_HDR_SIZE + payload_len;
+    int reply_len = sizeof(ethhdr_t) + sizeof(iphdr_t) + ICMP_HDR_SIZE + payload_len;
     uint8_t reply[reply_len];
     memset(reply, 0, reply_len);
 
     /* Extracting new frame's ethernet header, IP header, and ICMP packet */
     ethhdr_t *reply_ether_hdr = (ethhdr_t *)reply;
     iphdr_t *reply_ip_hdr = (iphdr_t *)(reply + sizeof(ethhdr_t));
-    icmp_packet_t *reply_icmp = (icmp_packet_t *)(reply + 
-                                        sizeof(ethhdr_t) + sizeof(iphdr_t));
+    icmp_packet_t *reply_icmp = (icmp_packet_t *)(reply + sizeof(ethhdr_t) + sizeof(iphdr_t));
 
     /* Set appropriate headers */
     // Ethernet header
@@ -236,8 +233,7 @@ void chirouter_send_icmp(chirouter_ctx_t *ctx, uint8_t type,
     }
     else 
     {
-        reply_ip_hdr->len = htons(sizeof(iphdr_t) + 
-                                            ICMP_HDR_SIZE + payload_len);
+        reply_ip_hdr->len = htons(sizeof(iphdr_t) + ICMP_HDR_SIZE + payload_len);
     }
     reply_ip_hdr->ttl = 64;
     reply_ip_hdr->cksum = cksum(reply_ip_hdr, sizeof(iphdr_t));
@@ -342,8 +338,7 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
             {
                 /* Accessing an ICMP message */
                 chilog(DEBUG, "[ICMP MESSAGE]");
-                icmp_packet_t* icmp = (icmp_packet_t*) (frame->raw + 
-                                        sizeof(ethhdr_t) + sizeof(iphdr_t));
+                icmp_packet_t* icmp = (icmp_packet_t*) (frame->raw + sizeof(ethhdr_t) + sizeof(iphdr_t));
                 if (icmp->type == ICMPTYPE_ECHO_REQUEST)
                 {
                     // ICMPTYPE_ECHO_REPLY
