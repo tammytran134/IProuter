@@ -83,8 +83,10 @@ uint32_t get_forward_ip (chirouter_rtable_entry_t *routing_entry,
 /* Helper function to get appropriate routing entry for ethernet frame
  * with longest-prefix matching.
  * @Params: pointer to router's context struct, pointer to ethernet frame
+ * Return: routing entry corresponding to the dst ip of the frame
  */
-chirouter_rtable_entry_t* chirouter_get_matching_entry(chirouter_ctx_t *ctx, ethernet_frame_t *frame)
+chirouter_rtable_entry_t* chirouter_get_matching_entry(chirouter_ctx_t *ctx,
+                                                    ethernet_frame_t *frame)
 {
     iphdr_t *ip_hdr = (iphdr_t *)(frame->raw + sizeof(ethhdr_t));
     chirouter_rtable_entry_t *result = NULL;
@@ -119,6 +121,7 @@ chirouter_rtable_entry_t* chirouter_get_matching_entry(chirouter_ctx_t *ctx, eth
 /* Helper function to forward IP datagram
  * @Params: pointer to chirouter_ctx_t, pointer to ethernet_frame_t, 
  * destination MAC address
+ * Return nothing
  */
 void forward_ip_datagram(chirouter_ctx_t *ctx, ethernet_frame_t *frame, uint8_t *dst_mac)
 {
@@ -154,6 +157,7 @@ void forward_ip_datagram(chirouter_ctx_t *ctx, ethernet_frame_t *frame, uint8_t 
 /* Helper function to check if there is an interface in the router that matches
  * frame's IP destination.
  * @Params: pointer to chirouter_ctx_t, pointer to ethernet_frame_t
+ * Return true if there's a match, false otherwise
  */
 bool chirouter_find_match_router(chirouter_ctx_t *ctx, ethernet_frame_t *frame)
 {
@@ -161,6 +165,8 @@ bool chirouter_find_match_router(chirouter_ctx_t *ctx, ethernet_frame_t *frame)
     chirouter_interface_t *interface;
     for (int i = 0; i < ctx->num_interfaces; i++)
     {
+        // loop through each interface of router to see if
+        // its ip address matches dst ip address of the frame
         interface = &ctx->interfaces[i];
         if (in_addr_to_uint32(interface->ip) == ip_hdr->dst)
         {
@@ -172,20 +178,24 @@ bool chirouter_find_match_router(chirouter_ctx_t *ctx, ethernet_frame_t *frame)
 
 /* Helper function to create and send an ICMP message
  * @Params: pointer to router's context struct, ICMP type, ICMP code, pointer
- * to ethernet frame
+ * to ethernet frame that triggers the icmp message
+ * Return nothing
  */
-void chirouter_send_icmp(chirouter_ctx_t *ctx, uint8_t type, uint8_t code, ethernet_frame_t *frame)
+void chirouter_send_icmp(chirouter_ctx_t *ctx, uint8_t type, 
+                                        uint8_t code, ethernet_frame_t *frame)
 {
     // From original frame
     ethhdr_t *frame_ethhdr = (ethhdr_t *)frame->raw;
     iphdr_t *frame_iphdr = (iphdr_t *)(frame->raw + sizeof(ethhdr_t));
-    icmp_packet_t* icmp = (icmp_packet_t*) (frame->raw + sizeof(ethhdr_t) + sizeof(iphdr_t));
+    icmp_packet_t* icmp = (icmp_packet_t*) (frame->raw + 
+                                    sizeof(ethhdr_t) + sizeof(iphdr_t));
 
     // Setting ICMP message's payload length
     int payload_len;
     if (type == ICMPTYPE_ECHO_REPLY || type == ICMPTYPE_ECHO_REQUEST)
     {
-        payload_len = ntohs(frame_iphdr->len) - sizeof(iphdr_t) - ICMP_HDR_SIZE;
+        payload_len = ntohs(frame_iphdr->len) - sizeof(iphdr_t) 
+                                                    - ICMP_HDR_SIZE;
     }
     else
     {
@@ -193,14 +203,16 @@ void chirouter_send_icmp(chirouter_ctx_t *ctx, uint8_t type, uint8_t code, ether
     }
 
     /* Constructing new frame for ICMP message */
-    int reply_len = sizeof(ethhdr_t) + sizeof(iphdr_t) + ICMP_HDR_SIZE + payload_len;
+    int reply_len = sizeof(ethhdr_t) + sizeof(iphdr_t) + 
+                                        ICMP_HDR_SIZE + payload_len;
     uint8_t reply[reply_len];
     memset(reply, 0, reply_len);
 
     /* Extracting new frame's ethernet header, IP header, and ICMP packet */
     ethhdr_t *reply_ether_hdr = (ethhdr_t *)reply;
     iphdr_t *reply_ip_hdr = (iphdr_t *)(reply + sizeof(ethhdr_t));
-    icmp_packet_t *reply_icmp = (icmp_packet_t *)(reply + sizeof(ethhdr_t) + sizeof(iphdr_t));
+    icmp_packet_t *reply_icmp = (icmp_packet_t *)(reply + 
+                                        sizeof(ethhdr_t) + sizeof(iphdr_t));
 
     /* Set appropriate headers */
     // Ethernet header
@@ -224,7 +236,8 @@ void chirouter_send_icmp(chirouter_ctx_t *ctx, uint8_t type, uint8_t code, ether
     }
     else 
     {
-        reply_ip_hdr->len = htons(sizeof(iphdr_t) + ICMP_HDR_SIZE + payload_len);
+        reply_ip_hdr->len = htons(sizeof(iphdr_t) + 
+                                            ICMP_HDR_SIZE + payload_len);
     }
     reply_ip_hdr->ttl = 64;
     reply_ip_hdr->cksum = cksum(reply_ip_hdr, sizeof(iphdr_t));
@@ -311,23 +324,26 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
         if (ip_hdr->dst == in_addr_to_uint32(frame->in_interface->ip))
         {
             chilog(DEBUG, "[FIRST CASE]: FRAME COMES TO THE ROUTER");
-            if ((ip_hdr->proto == IPPROTO_TCP) || (ip_hdr->proto == IPPROTO_UDP))
+            if ((ip_hdr->proto == IPPROTO_TCP) || 
+                                            (ip_hdr->proto == IPPROTO_UDP))
             {
-                // ICMP dst Port unreachable
-                chilog(DEBUG, "[TCP/UDP]");
-                chirouter_send_icmp(ctx, ICMPTYPE_DEST_UNREACHABLE, ICMPCODE_DEST_PORT_UNREACHABLE, frame);
+                // ICMP DESTINATION PORT UNREACHABLE
+                chilog(DEBUG, "[TCP/UDP PROTOCOL TYPE]");
+                chirouter_send_icmp(ctx, ICMPTYPE_DEST_UNREACHABLE, 
+                                    ICMPCODE_DEST_PORT_UNREACHABLE, frame);
             }
             else if (ip_hdr->ttl == 1)
             {
                 // ICMP time exceeded
-                chilog(DEBUG, "[TIME EXCEEDED]");
+                chilog(DEBUG, "[TIME EXCEEDED TTL = 1]");
                 chirouter_send_icmp(ctx, ICMPTYPE_TIME_EXCEEDED, 0, frame);
             }
             else if (ip_hdr->proto == IPPROTO_ICMP)
             {
                 /* Accessing an ICMP message */
-                chilog(DEBUG, "[ICMP]");
-                icmp_packet_t* icmp = (icmp_packet_t*) (frame->raw + sizeof(ethhdr_t) + sizeof(iphdr_t));
+                chilog(DEBUG, "[ICMP MESSAGE]");
+                icmp_packet_t* icmp = (icmp_packet_t*) (frame->raw + 
+                                        sizeof(ethhdr_t) + sizeof(iphdr_t));
                 if (icmp->type == ICMPTYPE_ECHO_REQUEST)
                 {
                     // ICMPTYPE_ECHO_REPLY
@@ -339,14 +355,16 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
             {
                 // ICMP destination protocol unreachable
                 chilog(DEBUG, "[DEST UNREACHABLE]");
-                chirouter_send_icmp(ctx, ICMPTYPE_DEST_UNREACHABLE, ICMPCODE_DEST_PROTOCOL_UNREACHABLE, frame);
+                chirouter_send_icmp(ctx, ICMPTYPE_DEST_UNREACHABLE, 
+                                    ICMPCODE_DEST_PROTOCOL_UNREACHABLE, frame);
             }
         }
         else if (chirouter_find_match_router(ctx, frame))
         {
-            chilog(DEBUG, "[SECOND CASE]: FRAME COMES TO OTHER ROUTERS");
+            chilog(DEBUG, "[SECOND CASE]: FRAME COMES TO OTHER INTERFACES OF THE ROUTER");
             // ICMP HOST UNREACHABLE
-            chirouter_send_icmp(ctx, ICMPTYPE_DEST_UNREACHABLE, ICMPCODE_DEST_HOST_UNREACHABLE, frame);
+            chirouter_send_icmp(ctx, ICMPTYPE_DEST_UNREACHABLE, 
+                                        ICMPCODE_DEST_HOST_UNREACHABLE, frame);
         }
         else
         {
@@ -355,9 +373,9 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
             if (forward_entry != NULL)
             {
                 chilog(DEBUG, "[IP FORWARDING]: ROUTING ENTRY FOUND");
-                uint32_t forward_ip = get_forward_ip (forward_entry, ip_hdr->dst);
+                uint32_t forward_ip = get_forward_ip(forward_entry, ip_hdr->dst);
                 pthread_mutex_lock(&(ctx->lock_arp));
-                chirouter_arpcache_entry_t* arpcache_entry = chirouter_arp_cache_lookup(ctx, uint32_to_in_addr(forward_ip)); // struct in_addr
+                chirouter_arpcache_entry_t* arpcache_entry = chirouter_arp_cache_lookup(ctx, uint32_to_in_addr(forward_ip));
                 pthread_mutex_unlock(&(ctx->lock_arp));
                 if (arpcache_entry == NULL)
                 {
@@ -371,9 +389,17 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
                         chilog(DEBUG, "[IP FORWARDING]: NOT IN PENDING REQUEST LIST");
                         pthread_mutex_lock(&(ctx->lock_arp));
                         chilog(DEBUG, "[ARP MESSAGE]: SEND ARP REQUEST");
-                        chirouter_send_arp_message(ctx, forward_entry->interface, NULL, forward_ip, ARP_OP_REQUEST);
-                        pending_req = chirouter_arp_pending_req_add(ctx, uint32_to_in_addr(forward_ip), forward_entry->interface);
-                        int result = chirouter_arp_pending_req_add_frame(ctx, pending_req, frame);
+                        chirouter_send_arp_message(ctx, 
+                                                    forward_entry->interface, 
+                                                    NULL, forward_ip, 
+                                                    ARP_OP_REQUEST);
+                        // add IP address to pending arp request list
+                        pending_req = chirouter_arp_pending_req_add(ctx, 
+                                                uint32_to_in_addr(forward_ip), 
+                                                forward_entry->interface);
+                        // add frame to the newly created pending arp request item
+                        int result = chirouter_arp_pending_req_add_frame(ctx, 
+                                                        pending_req, frame);
                         if (result == 1) {
                             /* An error occurred when adding withheld frames */
                             return -1;
@@ -384,7 +410,9 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
                     {
                         chilog(DEBUG, "[IP FORWARDING]: ALREADY IN PENDING REQUEST LIST");
                         pthread_mutex_lock(&(ctx->lock_arp));
-                        int result = chirouter_arp_pending_req_add_frame(ctx, pending_req, frame);
+                        // add frame to the already created pending arp request item
+                        int result = chirouter_arp_pending_req_add_frame(ctx, 
+                                                        pending_req, frame);
                         if (result == 1)
                         {
                             /* An error occurred when adding withheld frames */
@@ -399,7 +427,9 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
                     if (ip_hdr->ttl == 1)
                     {
                         // TIME_EXCEEDED
-                        chirouter_send_icmp(ctx, ICMPTYPE_TIME_EXCEEDED, 0, frame);
+                        chirouter_send_icmp(ctx, 
+                                            ICMPTYPE_TIME_EXCEEDED, 
+                                            0, frame);
                     }
                     else
                     {
@@ -412,7 +442,8 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
             {
                 chilog(DEBUG, "[IP FORWARDING]: ROUTING ENTRY NOT FOUND");
                 // ICMP network unreachable
-                chirouter_send_icmp(ctx, ICMPTYPE_DEST_UNREACHABLE, ICMPCODE_DEST_NET_UNREACHABLE, frame);
+                chirouter_send_icmp(ctx, ICMPTYPE_DEST_UNREACHABLE, 
+                                    ICMPCODE_DEST_NET_UNREACHABLE, frame);
             }
         }
         return 0;
@@ -423,8 +454,6 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
         chilog(DEBUG, "[ETHERNET TYPE]: ARP MESSAGES");
         arp_packet_t* arp = malloc (sizeof (arp_packet_t));
         arp = (arp_packet_t*) (frame->raw + sizeof(ethhdr_t));
-        // chilog(DEBUG, "[ETHERNET TYPE]: DEST IP ADDRESS %zu", arp->tpa);
-        // chilog(DEBUG, "[ETHERNET TYPE]: ROUTER IP ADDRESS %zu", in_addr_to_uint32(frame->in_interface->ip));
         if (arp->tpa == in_addr_to_uint32(frame->in_interface->ip))
         {
             chilog(DEBUG, "[ARP MESSAGE]: IT'S FOR ME");
@@ -432,7 +461,10 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
             {
                 chilog(DEBUG, "[ARP MESSAGE]: ARP REPLY");
                 pthread_mutex_lock(&(ctx->lock_arp));
-                int result = chirouter_arp_cache_add(ctx, uint32_to_in_addr(arp->spa), arp->sha); 
+                // add ip and corresponding mac address to arp cache
+                int result = chirouter_arp_cache_add(ctx, 
+                                                uint32_to_in_addr(arp->spa),
+                                                arp->sha); 
                 pthread_mutex_unlock(&(ctx->lock_arp));
                 if (result != 0)
                 {
@@ -448,7 +480,7 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
                 }
                 else
                 {
-                    chilog(DEBUG, "[ARP MESSAGE] WENT HERE???");
+                    chilog(DEBUG, "[ARP MESSAGE] PENDING ARP FOUND");
                     withheld_frame_t *elt;
                     DL_FOREACH(arp_req->withheld_frames, elt)
                     {
@@ -459,7 +491,9 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
                             if (ip_hdr->ttl == 1) 
                             {
                                 // Time exceeded
-                                chirouter_send_icmp(ctx, ICMPTYPE_TIME_EXCEEDED, 0, elt->frame);
+                                chirouter_send_icmp(ctx, 
+                                                    ICMPTYPE_TIME_EXCEEDED,
+                                                    0, elt->frame);
                             }
                             else
                             {

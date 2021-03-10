@@ -79,7 +79,24 @@ uint16_t cksum(const void *_data, int len);
  */
 bool ethernet_addr_is_equal(uint8_t *addr1, uint8_t *addr2);
 
+/*
+ * in_addr_to_uint32 - convert struct in_addr to uint32_t 
+ *
+ * @Param: ip address in struct in_addr format
+ *
+ * Returns: ip address in uint32_t format
+ *
+ */
 uint32_t in_addr_to_uint32 (struct in_addr address);
+
+/*
+ * uint32_to_in_addr - convert uint32_t to struct in_addr
+ *
+ * @Param: ip address in uint32_t format
+ *
+ * Returns: pointer to struct in_addr that holds the ip address
+ *
+ */
 struct in_addr *uint32_to_in_addr (uint32_t address);
 
 #endif

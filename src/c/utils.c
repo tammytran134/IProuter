@@ -97,11 +97,13 @@ bool ethernet_addr_is_equal(uint8_t *addr1, uint8_t *addr2)
     return true;
 }
 
+/* See utils.h */
 uint32_t in_addr_to_uint32 (struct in_addr address)
 {
     return ((uint32_t) address.s_addr);
 }
 
+/* See utils.h */
 struct in_addr *uint32_to_in_addr (uint32_t address)
 {
     struct in_addr *result = calloc(1, sizeof (struct in_addr));

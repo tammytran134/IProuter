@@ -79,15 +79,19 @@
 #define ARP_REQ_REMOVE (1)
 
 /* ICMP send frame function */
-void chirouter_send_icmp(chirouter_ctx_t *ctx, uint8_t type, uint8_t code, ethernet_frame_t *frame);
+void chirouter_send_icmp(chirouter_ctx_t *ctx, uint8_t type, uint8_t code, 
+                                                ethernet_frame_t *frame);
 
-void chirouter_send_arp_message(chirouter_ctx_t *ctx, chirouter_interface_t *out_interface, 
-                                            uint8_t *dst_mac, uint32_t dst_ip, int type)
+void chirouter_send_arp_message(chirouter_ctx_t *ctx, 
+                                chirouter_interface_t *out_interface, 
+                                uint8_t *dst_mac, uint32_t dst_ip, int type)
 {
+    // initialize the frame
     uint8_t *raw = calloc(1, sizeof (ethhdr_t) + (sizeof (arp_packet_t)));
     ethhdr_t* hdr = (ethhdr_t*) raw;
     hdr->type = htons(ETHERTYPE_ARP); 
 
+    // construct the arp packet
     arp_packet_t *arp_packet = calloc (1, sizeof (arp_packet_t));
     arp_packet = (arp_packet_t*) (raw + sizeof(ethhdr_t));
     arp_packet->hrd = htons(ARP_HRD_ETHERNET);
@@ -96,7 +100,6 @@ void chirouter_send_arp_message(chirouter_ctx_t *ctx, chirouter_interface_t *out
     arp_packet->pln = IPV4_ADDR_LEN;
     if (type == ARP_OP_REQUEST)
     {
-        //chilog(DEBUG, "[ARP MESSAGE]: CONSTRUCTING ARP REQUEST - OPCODE = %i", ARP_OP_REQUEST);
         memcpy(hdr->dst, "\xFF\xFF\xFF\xFF\xFF\xFF", ETHER_ADDR_LEN);
         memcpy(hdr->src, out_interface->mac, ETHER_ADDR_LEN);
         arp_packet->op = htons(ARP_OP_REQUEST);
@@ -111,7 +114,6 @@ void chirouter_send_arp_message(chirouter_ctx_t *ctx, chirouter_interface_t *out
     }
     else if (type == ARP_OP_REPLY)
     {
-        //chilog(DEBUG, "[ARP MESSAGE]: CONSTRUCTING ARP REQUEST - OPCODE = %i", ARP_OP_REPLY);
         memcpy(hdr->dst, dst_mac, ETHER_ADDR_LEN);
         memcpy(hdr->src, out_interface->mac, ETHER_ADDR_LEN);
         arp_packet->op = htons(ARP_OP_REPLY);
@@ -126,7 +128,7 @@ void chirouter_send_arp_message(chirouter_ctx_t *ctx, chirouter_interface_t *out
     }
     else
     {
-        // chilog
+        chilog(DEBUG, "[ARP MESSAGE]: INVALID OPCODE");
     }
 }
 
@@ -149,7 +151,8 @@ void chirouter_send_arp_message(chirouter_ctx_t *ctx, chirouter_interface_t *out
  *  - ARP_REQ_KEEP if the ARP request should stay in the pending ARP request list.
  *  - ARP_REQ_REMOVE if the request should be removed from the list.
  */
-int chirouter_arp_process_pending_req(chirouter_ctx_t *ctx, chirouter_pending_arp_req_t *pending_req)
+int chirouter_arp_process_pending_req(chirouter_ctx_t *ctx, 
+                                chirouter_pending_arp_req_t *pending_req)
 {
     /* Your code goes here */
     if (pending_req->times_sent < 5)
@@ -170,7 +173,8 @@ int chirouter_arp_process_pending_req(chirouter_ctx_t *ctx, chirouter_pending_ar
         {
             if (elt != NULL) {
                 chirouter_send_icmp(ctx, ICMPTYPE_DEST_UNREACHABLE, 
-                                    ICMPCODE_DEST_HOST_UNREACHABLE, elt->frame);
+                                    ICMPCODE_DEST_HOST_UNREACHABLE, 
+                                    elt->frame);
             }
         }
         return ARP_REQ_REMOVE;
