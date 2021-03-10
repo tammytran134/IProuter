@@ -455,7 +455,18 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
                         // Forward IP datagram
                         if (elt != NULL)
                         {
-                            forward_ip_datagram(ctx, elt->frame, arp->sha);
+                            iphdr_t *ip_hdr = (iphdr_t *)(elt->frame->raw + sizeof(ethhdr_t));
+                            if (ip_hdr->ttl == 1) 
+                            {
+                                // Time exceeded
+                                chirouter_send_icmp(ctx, ICMPTYPE_TIME_EXCEEDED, 0, elt->frame);
+                            }
+                            else
+                            {
+                                // Forward withheld frame
+                                forward_ip_datagram(ctx, elt->frame, arp->sha);
+                            }
+                            
                         }
                     }
                     // Free withheld frames
