@@ -168,7 +168,10 @@ int chirouter_arp_process_pending_req(chirouter_ctx_t *ctx, chirouter_pending_ar
         withheld_frame_t *elt;
         DL_FOREACH(pending_req->withheld_frames, elt)
         {
-            chirouter_send_icmp(ctx, ICMPTYPE_DEST_UNREACHABLE, ICMPCODE_DEST_HOST_UNREACHABLE, elt->frame);
+            if (elt != NULL) {
+                chirouter_send_icmp(ctx, ICMPTYPE_DEST_UNREACHABLE, 
+                                    ICMPCODE_DEST_HOST_UNREACHABLE, elt->frame);
+            }
         }
         return ARP_REQ_REMOVE;
     }
