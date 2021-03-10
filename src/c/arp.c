@@ -96,6 +96,7 @@ void chirouter_send_arp_message(chirouter_ctx_t *ctx, chirouter_interface_t *out
     arp_packet->pln = IPV4_ADDR_LEN;
     if (type == ARP_OP_REQUEST)
     {
+        //chilog(DEBUG, "[ARP MESSAGE]: CONSTRUCTING ARP REQUEST - OPCODE = %i", ARP_OP_REQUEST);
         memcpy(hdr->dst, "\xFF\xFF\xFF\xFF\xFF\xFF", ETHER_ADDR_LEN);
         memcpy(hdr->src, out_interface->mac, ETHER_ADDR_LEN);
         arp_packet->op = htons(ARP_OP_REQUEST);
@@ -105,10 +106,12 @@ void chirouter_send_arp_message(chirouter_ctx_t *ctx, chirouter_interface_t *out
         arp_packet->tpa = dst_ip;
         chirouter_send_frame(ctx, out_interface, raw, 
                     ((sizeof (ethhdr_t)) + (sizeof (arp_packet_t))));
+        chilog(DEBUG, "[ARP MESSAGE]: ARP REQUEST SENT");
         // free the frame
     }
     else if (type == ARP_OP_REPLY)
     {
+        //chilog(DEBUG, "[ARP MESSAGE]: CONSTRUCTING ARP REQUEST - OPCODE = %i", ARP_OP_REPLY);
         memcpy(hdr->dst, dst_mac, ETHER_ADDR_LEN);
         memcpy(hdr->src, out_interface->mac, ETHER_ADDR_LEN);
         arp_packet->op = htons(ARP_OP_REPLY);
@@ -152,6 +155,7 @@ int chirouter_arp_process_pending_req(chirouter_ctx_t *ctx, chirouter_pending_ar
     if (pending_req->times_sent < 5)
     {
         // send arp request
+        chilog(DEBUG, "[ARP MESSAGE]: SENDING ARP REQUEST FROM CHIROUTER ARP PROCESS FUNCTION");
         chirouter_send_arp_message(ctx, pending_req->out_interface, 
                                     NULL, in_addr_to_uint32(pending_req->ip), 
                                     ARP_OP_REQUEST);

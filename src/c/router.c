@@ -411,7 +411,9 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
                 if (arp_req == NULL)
                 {
                     chilog(DEBUG, "[ARP MESSAGE]: NO PENDING ARP FOUND");
+                    
                 }
+                else{
                 chilog(DEBUG, "[ARP MESSAGE] WENT HERE???");
                 withheld_frame_t *elt;
                 DL_FOREACH(arp_req->withheld_frames, elt)
@@ -426,6 +428,7 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
                 chirouter_arp_pending_req_free_frames(arp_req);
                 // remove the pending ARP request from the pending ARP request list
                 DL_DELETE(ctx->pending_arp_reqs, arp_req);
+                }
                 pthread_mutex_unlock(&(ctx->lock_arp));
                 
             } 
@@ -439,6 +442,10 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
                 // pthread_mutex_lock(&(ctx->lock_arp));
                 // int result = chirouter_arp_cache_add(ctx, uint32_to_in_addr(arp->spa), arp->sha); 
                 // pthread_mutex_unlock(&(ctx->lock_arp)); 
+            }
+            else
+            {
+                chilog(DEBUG, "[ARP MESSAGE]: ARP CODE NOT VALID");
             }
         }
         else
