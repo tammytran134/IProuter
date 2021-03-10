@@ -370,7 +370,7 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
                     else
                     {
                         // Forward IP datagram
-                        forward_ip_datagram(ctx, frame, hdr->dst);
+                        forward_ip_datagram(ctx, frame, arpcache_entry->mac);
                     }
                 }
             }
