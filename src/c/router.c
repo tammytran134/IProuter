@@ -332,18 +332,19 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
             if (forward_entry != NULL)
             {
                 chilog(DEBUG, "[IP FORWARDING]: ROUTING ENTRY FOUND");
+                uint32_t forward_ip = get_forward_ip (forward_entry, ip_hdr->dst);
                 pthread_mutex_lock(&(ctx->lock_arp));
-                chirouter_arpcache_entry_t* arpcache_entry = chirouter_arp_cache_lookup(ctx, uint32_to_in_addr(ip_hdr->dst)); // struct in_addr
+                chirouter_arpcache_entry_t* arpcache_entry = chirouter_arp_cache_lookup(ctx, uint32_to_in_addr(forward_ip)); // struct in_addr
                 pthread_mutex_unlock(&(ctx->lock_arp));
                 if (arpcache_entry == NULL)
                 {
                     chilog(DEBUG, "[IP FORWARDING]: ARP CACHE ENTRY NOT FOUND");
                     pthread_mutex_lock(&(ctx->lock_arp));
-                    chirouter_pending_arp_req_t* pending_req = chirouter_arp_pending_req_lookup(ctx, uint32_to_in_addr(ip_hdr->dst));
+                    chirouter_pending_arp_req_t* pending_req = chirouter_arp_pending_req_lookup(ctx, uint32_to_in_addr(forward_ip));
                     pthread_mutex_unlock(&(ctx->lock_arp));
                     if (pending_req == NULL)
                     {
-                        uint32_t forward_ip = get_forward_ip (forward_entry, ip_hdr->dst);
+                        
                         chilog(DEBUG, "[IP FORWARDING]: NOT IN PENDING REQUEST LIST");
                         pthread_mutex_lock(&(ctx->lock_arp));
                         chilog(DEBUG, "[ARP MESSAGE]: SEND ARP REQUEST");
