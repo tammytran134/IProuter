@@ -410,7 +410,6 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
                 if (arp_req == NULL)
                 {
                     chilog(DEBUG, "[ARP MESSAGE]: NO PENDING ARP FOUND");
-                    return;
                 }
                 chilog(DEBUG, "[ARP MESSAGE] WENT HERE???");
                 withheld_frame_t *elt;
@@ -435,7 +434,10 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
                 chilog(DEBUG, "[ARP MESSAGE]: ARP REQUEST");
                 chirouter_send_arp_message(ctx, frame->in_interface, 
                                     arp->sha, arp->spa,
-                                    ARP_OP_REPLY); 
+                                    ARP_OP_REPLY);
+                // pthread_mutex_lock(&(ctx->lock_arp));
+                // int result = chirouter_arp_cache_add(ctx, uint32_to_in_addr(arp->spa), arp->sha); 
+                // pthread_mutex_unlock(&(ctx->lock_arp)); 
             }
         }
         else
