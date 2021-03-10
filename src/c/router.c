@@ -362,6 +362,7 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
                 }
                 else
                 {
+                    chilog(DEBUG, "[IP FORWARDING]: ARP CACHE ENTRY FOUND");
                     if (ip_hdr->ttl == 1)
                     {
                         // TIME_EXCEEDED
