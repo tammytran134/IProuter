@@ -107,7 +107,7 @@ chirouter_rtable_entry_t* chirouter_get_matching_entry(chirouter_ctx_t *ctx, eth
 
 void forward_ip_datagram(chirouter_ctx_t *ctx, ethernet_frame_t *frame, uint8_t *dst_mac)
 {
-    chilog(DEBUG, "[FORWAD] in forward function");
+    chilog(DEBUG, "[FORWARD] in forward function");
     // From original frame
     ethhdr_t *frame_ethhdr = (ethhdr_t *)frame->raw;
     iphdr_t *frame_iphdr = (iphdr_t *)(frame->raw + sizeof(ethhdr_t));
@@ -118,37 +118,20 @@ void forward_ip_datagram(chirouter_ctx_t *ctx, ethernet_frame_t *frame, uint8_t 
     uint8_t msg[msg_len];
     memset(msg, 0, msg_len);
 
-    chilog(DEBUG, "[FORWAD] Setting ethernet header values");
     /* Ethernet header */
     ethhdr_t *ether_hdr = (ethhdr_t *) msg;
     memcpy(ether_hdr->dst, dst_mac, ETHER_ADDR_LEN);
     memcpy(ether_hdr->src, rentry->interface->mac, ETHER_ADDR_LEN);
     ether_hdr->type = htons(ETHERTYPE_IP);
-    chilog(DEBUG, "[FORWAD] Done setting ethernet header values");
 
-    chilog(DEBUG, "[FORWAD] Copying ip header values");
     /* IP header */
     iphdr_t *ip_hdr = (iphdr_t *)(msg + sizeof(ethhdr_t));
     // Copy frame's ip header over
-    memcpy(ip_hdr, frame_iphdr, frame->length - sizeof(ethhdr_t));
-    chilog(DEBUG, "[FORWAD] Done copying ip header values");
-
-    chilog(DEBUG, "[FORWAD] Updating ip header values");
+    memcpy(ip_hdr, frame_iphdr, ntohs(frame_iphdr->len));
     // Update TTL
     ip_hdr->ttl = frame_iphdr->ttl - 1;
-    // find the correct entry, gateway
-    // ip_hdr->dst = get_forward_ip(rentry, ip_hdr->dst);
-    // Update cksum
     ip_hdr->cksum = htons(0);
     ip_hdr->cksum = cksum(ip_hdr, sizeof(iphdr_t));
-    chilog(DEBUG, "[FORWAD] Done updating ip header values");
-
-    // ethhdr_t *frame_ethhdr = (ethhdr_t *)frame->raw;
-    // iphdr_t *ip_hdr = (iphdr_t *)(frame->raw + sizeof(ethhdr_t));
-    // // update TTL and checksum
-    // ip_hdr->ttl--;
-    // ip_hdr->cksum = cksum(ip_hdr, sizeof(iphdr_t));
-
     chirouter_send_frame(ctx, rentry->interface, msg, msg_len);
     return;
 }
@@ -427,6 +410,7 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
                 if (arp_req == NULL)
                 {
                     chilog(DEBUG, "[ARP MESSAGE]: NO PENDING ARP FOUND");
+                    return;
                 }
                 chilog(DEBUG, "[ARP MESSAGE] WENT HERE???");
                 withheld_frame_t *elt;
@@ -442,7 +426,7 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
                 chirouter_arp_pending_req_free_frames(arp_req);
                 // remove the pending ARP request from the pending ARP request list
                 DL_DELETE(ctx->pending_arp_reqs, arp_req);
-                pthread_mutex_lock(&(ctx->lock_arp));
+                pthread_mutex_unlock(&(ctx->lock_arp));
                 
             } 
             else if (ntohs(arp->op) == ARP_OP_REQUEST)
