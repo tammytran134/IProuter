@@ -133,7 +133,7 @@ void forward_ip_datagram(chirouter_ctx_t *ctx, ethernet_frame_t *frame, uint8_t 
 
     /* Construct new frame */
     int msg_len = frame->length;
-    uint8_t msg[msg_len];
+    uint8_t* msg = calloc(1, msg_len);
     memset(msg, 0, msg_len);
 
     /* Ethernet header */
@@ -150,7 +150,10 @@ void forward_ip_datagram(chirouter_ctx_t *ctx, ethernet_frame_t *frame, uint8_t 
     ip_hdr->ttl = frame_iphdr->ttl - 1;
     ip_hdr->cksum = htons(0);
     ip_hdr->cksum = cksum(ip_hdr, sizeof(iphdr_t));
+
+    // Forward newly constructed IP datagram
     chirouter_send_frame(ctx, rentry->interface, msg, msg_len);
+    free(msg);
     return;
 }
 
@@ -203,7 +206,7 @@ void chirouter_send_icmp(chirouter_ctx_t *ctx, uint8_t type,
 
     /* Constructing new frame for ICMP message */
     int reply_len = sizeof(ethhdr_t) + sizeof(iphdr_t) + ICMP_HDR_SIZE + payload_len;
-    uint8_t reply[reply_len];
+    uint8_t* reply = calloc(1, reply_len);
     memset(reply, 0, reply_len);
 
     /* Extracting new frame's ethernet header, IP header, and ICMP packet */
@@ -264,8 +267,9 @@ void chirouter_send_icmp(chirouter_ctx_t *ctx, uint8_t type,
     }
     reply_icmp->chksum = cksum(reply_icmp, ICMP_HDR_SIZE + payload_len);
 
+    // Send ICMP message
     chirouter_send_frame(ctx, frame->in_interface, reply, reply_len);
-
+    free(reply);
     return;
 }
 
@@ -447,8 +451,7 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
     {
         /* Accessing an ARP message */
         chilog(DEBUG, "[ETHERNET TYPE]: ARP MESSAGES");
-        arp_packet_t* arp = malloc (sizeof (arp_packet_t));
-        arp = (arp_packet_t*) (frame->raw + sizeof(ethhdr_t));
+        arp_packet_t* arp = (arp_packet_t*) (frame->raw + sizeof(ethhdr_t));
         if (arp->tpa == in_addr_to_uint32(frame->in_interface->ip))
         {
             chilog(DEBUG, "[ARP MESSAGE]: IT'S FOR ME");
@@ -506,6 +509,7 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
                     }
                     // remove the pending ARP request from the pending ARP request list
                     DL_DELETE(ctx->pending_arp_reqs, arp_req);
+                    free(arp_req);
                 }
                 pthread_mutex_unlock(&(ctx->lock_arp));
                 

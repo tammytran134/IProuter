@@ -92,8 +92,7 @@ void chirouter_send_arp_message(chirouter_ctx_t *ctx,
     hdr->type = htons(ETHERTYPE_ARP); 
 
     // construct the arp packet
-    arp_packet_t *arp_packet = calloc (1, sizeof (arp_packet_t));
-    arp_packet = (arp_packet_t*) (raw + sizeof(ethhdr_t));
+    arp_packet_t *arp_packet = (arp_packet_t*) (raw + sizeof(ethhdr_t));
     arp_packet->hrd = htons(ARP_HRD_ETHERNET);
     arp_packet->pro = htons(ETHERTYPE_IP);   
     arp_packet->hln = ETHER_ADDR_LEN;
@@ -110,7 +109,6 @@ void chirouter_send_arp_message(chirouter_ctx_t *ctx,
         chirouter_send_frame(ctx, out_interface, raw, 
                     ((sizeof (ethhdr_t)) + (sizeof (arp_packet_t))));
         chilog(DEBUG, "[ARP MESSAGE]: ARP REQUEST SENT");
-        // free the frame
     }
     else if (type == ARP_OP_REPLY)
     {
@@ -124,12 +122,12 @@ void chirouter_send_arp_message(chirouter_ctx_t *ctx,
         chirouter_send_frame(ctx, out_interface, raw, 
                     ((sizeof (ethhdr_t)) + (sizeof (arp_packet_t))));
         chilog(DEBUG, "[ARP MESSAGE]: ARP REPLY SENT");
-        // free the frame
     }
     else
     {
         chilog(DEBUG, "[ARP MESSAGE]: INVALID OPCODE");
     }
+    free(raw);
 }
 
 /*
