@@ -6,3 +6,4 @@
 /chirouter
 .cache
 /build
+/build/*

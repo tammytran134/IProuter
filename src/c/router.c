@@ -133,7 +133,7 @@ void forward_ip_datagram(chirouter_ctx_t *ctx, ethernet_frame_t *frame, uint8_t 
 
     /* Construct new frame */
     int msg_len = frame->length;
-    uint8_t* msg = calloc(1, msg_len);
+    uint8_t msg[msg_len];
     memset(msg, 0, msg_len);
 
     /* Ethernet header */
@@ -153,7 +153,6 @@ void forward_ip_datagram(chirouter_ctx_t *ctx, ethernet_frame_t *frame, uint8_t 
 
     // Forward newly constructed IP datagram
     chirouter_send_frame(ctx, rentry->interface, msg, msg_len);
-    free(msg);
     return;
 }
 
@@ -206,7 +205,7 @@ void chirouter_send_icmp(chirouter_ctx_t *ctx, uint8_t type,
 
     /* Constructing new frame for ICMP message */
     int reply_len = sizeof(ethhdr_t) + sizeof(iphdr_t) + ICMP_HDR_SIZE + payload_len;
-    uint8_t* reply = calloc(1, reply_len);
+    uint8_t reply[reply_len];
     memset(reply, 0, reply_len);
 
     /* Extracting new frame's ethernet header, IP header, and ICMP packet */
@@ -269,7 +268,6 @@ void chirouter_send_icmp(chirouter_ctx_t *ctx, uint8_t type,
 
     // Send ICMP message
     chirouter_send_frame(ctx, frame->in_interface, reply, reply_len);
-    free(reply);
     return;
 }
 
