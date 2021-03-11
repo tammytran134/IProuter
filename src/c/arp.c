@@ -161,6 +161,7 @@ int chirouter_arp_process_pending_req(chirouter_ctx_t *ctx,
                                     NULL, in_addr_to_uint32(pending_req->ip), 
                                     ARP_OP_REQUEST);
         pending_req->times_sent++;
+        pending_req->last_sent = time(NULL);
         return ARP_REQ_KEEP;
     }
     else 

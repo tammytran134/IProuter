@@ -394,6 +394,8 @@ int chirouter_process_ethernet_frame(chirouter_ctx_t *ctx, ethernet_frame_t *fra
                         pending_req = chirouter_arp_pending_req_add(ctx, 
                                                 uint32_to_in_addr(forward_ip), 
                                                 forward_entry->interface);
+                        pending_req->times_sent++;
+                        pending_req->last_sent = time(NULL);
                         // add frame to the newly created pending arp request item
                         int result = chirouter_arp_pending_req_add_frame(ctx, 
                                                         pending_req, frame);
