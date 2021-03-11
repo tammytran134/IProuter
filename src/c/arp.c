@@ -87,7 +87,8 @@ void chirouter_send_arp_message(chirouter_ctx_t *ctx,
                                 uint8_t *dst_mac, uint32_t dst_ip, int type)
 {
     // initialize the frame
-    uint8_t *raw = calloc(1, sizeof (ethhdr_t) + (sizeof (arp_packet_t)));
+    int payload_len = sizeof (ethhdr_t) + (sizeof (arp_packet_t));
+    uint8_t raw[payload_len];
     ethhdr_t* hdr = (ethhdr_t*) raw;
     hdr->type = htons(ETHERTYPE_ARP); 
 
@@ -127,7 +128,6 @@ void chirouter_send_arp_message(chirouter_ctx_t *ctx,
     {
         chilog(DEBUG, "[ARP MESSAGE]: INVALID OPCODE");
     }
-    free(raw);
 }
 
 /*
